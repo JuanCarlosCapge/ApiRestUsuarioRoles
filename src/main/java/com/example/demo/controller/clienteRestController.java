@@ -1,9 +1,15 @@
 package com.example.demo.controller;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -17,7 +23,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.models.entity.cliente;
 import com.example.demo.models.service.clienteService;
@@ -74,7 +82,7 @@ public class clienteRestController {
 		Map<String,Object> response= new HashMap<>();
 		try {
 			c =clienteService.guardar(c);
-					
+			cnuevo=c;	
 		}catch(DataAccessException e){
 			response.put("mensaje", "Error al realizar la consulta");
 			response.put("error",e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
@@ -85,20 +93,100 @@ public class clienteRestController {
 		return new ResponseEntity<Map<String,Object>>(response,HttpStatus.OK);
 	}
 	
+//	@PutMapping("/cliente/{id}")
+//	public cliente actualizar(@RequestBody cliente c, @PathVariable Long id) {
+//		cliente cact = clienteService.devolverCliente(id);
+//		cact.setApellido(c.getApellido());
+//		cact.setNombre(c.getNombre());
+//		cact.setEmail(c.getEmail());
+//		cact.setTelefono(c.getTelefono());
+//		return clienteService.guardar(cact);
+//	}
+	
+	
 	@PutMapping("/cliente/{id}")
-		public cliente actualizar(@RequestBody cliente c, @PathVariable Long id) {
-		cliente cact=clienteService.devolverCliente(id);
-		cact.setApellido(c.getApellido());
-		cact.setNombre(c.getNombre());
-		cact.setEmail(c.getEmail());
-		cact.setTelefono(c.getTelefono());
-		return clienteService.guardar(cact);
+	public ResponseEntity<?> actualizar(@RequestBody cliente c,@PathVariable Long id) {
+		cliente cActual= clienteService.devolverCliente(id);
+		Map<String,Object> response= new HashMap<>();
+		
+		if(cActual==null) {
+			response.put("mensaje", "el cliente id: ".concat(id.toString().concat(" no existe")));
+			return new ResponseEntity<Map<String,Object>>(response,HttpStatus.NOT_FOUND);
 		}
+		
+		try {
+			cActual.setNombre(c.getNombre());
+			cActual.setApellido(c.getApellido());
+			cActual.setEmail(c.getEmail());
+			cActual.setTelefono(c.getTelefono());
+			cActual.setCreatedAt(c.getCreatedAt());
+			
+			clienteService.guardar(cActual);
+					
+		}catch(DataAccessException e){
+			response.put("mensaje", "Error al realizar la consulta");
+			response.put("error",e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String,Object>>(response,HttpStatus.NOT_FOUND);
+		}
+		response.put("mensaje", "el cliente ha sido modificado");
+		response.put("cliente", cActual);
+		return new ResponseEntity<Map<String,Object>>(response,HttpStatus.CREATED);
+	}
+	
+//	@DeleteMapping("/cliente/{id}")
+//	public void borrar(@PathVariable Long id) {
+//		clienteService.borrar(id);
+//
+//	}
 	
 	@DeleteMapping("/cliente/{id}")
-	public void borrar(@PathVariable Long id) {
-		clienteService.borrar(id);
+	public ResponseEntity<?> borrar(@PathVariable Long id) {
+		Map<String,Object> response= new HashMap<>();
+		try {
+			clienteService.borrar(id);
+					
+		}catch(DataAccessException e){
+			response.put("mensaje", "Error al realizar la consulta");
+			response.put("error",e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String,Object>>(response,HttpStatus.NOT_FOUND);
+		}
+		response.put("mensaje", "el cliente ha sido eliminado");
+		
+		return new ResponseEntity<Map<String,Object>>(response,HttpStatus.OK);
+	
 
+	}
+	
+	@PostMapping("cliente/upload")
+	public ResponseEntity<?> upload(@RequestParam("archivo") MultipartFile archivo,@RequestParam("id") Long id){
+		Map<String,Object> response= new HashMap<>();
+		cliente c=clienteService.devolverCliente(id);
+		if(!archivo.isEmpty()) {
+			String nombreArchivo=UUID.randomUUID().toString()+"_"+archivo.getOriginalFilename().replace(" ", "");
+			Path rutaArchivo=Paths.get("uploads").resolve(nombreArchivo).toAbsolutePath();
+			
+			if(c.getImagen()!=null) {
+				String n=c.getImagen();
+				Path rutaAntigua=Paths.get("uploads").resolve(n).toAbsolutePath();
+				File archivoAntiguo=rutaAntigua.toFile();
+				archivoAntiguo.delete();
+			}
+				
+			try {
+				Files.copy(archivo.getInputStream(), rutaArchivo);
+			}catch(IOException e){
+				response.put("mensaje", "Error al subir la imagen");
+				response.put("error",e.getMessage().concat(": ").concat(e.getCause().getMessage()));
+				return new ResponseEntity<Map<String,Object>>(response,HttpStatus.INTERNAL_SERVER_ERROR);
+				
+			}
+			c.setImagen(nombreArchivo);
+			clienteService.guardar(c);
+			response.put("cliente", c);
+			response.put("mensaje", " la imagen "+ nombreArchivo+ " se ha subido correctamente");
+			
+		}
+		return new ResponseEntity<Map<String,Object>>(response,HttpStatus.CREATED);
 	}
 	
 	
