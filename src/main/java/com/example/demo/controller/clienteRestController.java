@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,9 +12,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import javax.management.RuntimeErrorException;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -189,6 +195,24 @@ public class clienteRestController {
 		return new ResponseEntity<Map<String,Object>>(response,HttpStatus.CREATED);
 	}
 	
+	@GetMapping("/uploads/img/{nombreFoto:.+}")
+	public ResponseEntity<Resource> verFoto(@PathVariable String nombreFoto){
+		Path rutaArchivo =Paths.get("uploads").resolve(nombreFoto).toAbsolutePath();
+		Resource r=null;
+		try {
+			r= new UrlResource(rutaArchivo.toUri());
+		}catch(MalformedURLException e){
+			e.printStackTrace();
+			
+		}
+		if(!r.exists()&&!r.isReadable()) {
+			throw new RuntimeException("No se puede cargar la imagen "+ nombreFoto);
+		}
+		HttpHeaders h = new HttpHeaders();
+		h.add(HttpHeaders.CONTENT_DISPOSITION,"attachement;filename=\""+r.getFilename()+"\"");
+		return new ResponseEntity<Resource>(r,h,HttpStatus.OK);
+		
+	}
 	
 	
 

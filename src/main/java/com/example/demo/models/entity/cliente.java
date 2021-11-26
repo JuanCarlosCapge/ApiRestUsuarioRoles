@@ -5,12 +5,19 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 
 @Entity
@@ -38,7 +45,16 @@ public class cliente implements Serializable{
 	
 	private String imagen;
 	
+	@NotNull(message= "No puede estar vacio")
+	@ManyToOne(fetch=FetchType.LAZY)
+	@JoinColumn(name="region_id")
+	@JsonIgnoreProperties({"hibernateLazyInitializer","handdler"})
+	private region region;
 	
+	@PrePersist
+	public void prePersist() {
+		createdAt= new Date();
+	}
 	public String getImagen() {
 		return imagen;
 	}
@@ -80,6 +96,12 @@ public class cliente implements Serializable{
 	}
 	public void setCreatedAt(Date createdAt) {
 		this.createdAt = createdAt;
+	}
+	public region getRegion() {
+		return region;
+	}
+	public void setRegion(region region) {
+		this.region = region;
 	}
 	
 

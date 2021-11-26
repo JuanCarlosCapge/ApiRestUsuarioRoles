@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.models.dao.clienteDao;
 import com.example.demo.models.entity.cliente;
+import com.example.demo.models.entity.region;
 
 @Service
 public class clienteServiceImpl implements clienteService{
@@ -37,6 +38,13 @@ public class clienteServiceImpl implements clienteService{
 	@Transactional
 	public void borrar(Long id) {
 		clienteDao.deleteById(id);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<region> findAllRegion(){		
+		return clienteDao.finAllRegion();
+		
 	}
 	
 
